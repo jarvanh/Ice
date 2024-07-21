@@ -163,8 +163,13 @@ struct MenuBarItem {
 
 // MARK: MenuBarItem Getters
 extension MenuBarItem {
-    /// Returns an array of menu bar items in the menu bar for the given display.
-    static func getMenuBarItemsCoreGraphics(for display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
+    /// The method to use to get the menu bar items.
+    enum GetterMethod {
+        case coreGraphics
+        case privateAPI
+    }
+
+    private static func getMenuBarItemsCoreGraphics(on display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
         let windows = if onScreenOnly {
             WindowInfo.getOnScreenWindows(excludeDesktopWindows: true)
         } else {
@@ -188,12 +193,7 @@ extension MenuBarItem {
             .sortedByOrderInMenuBar()
     }
 
-    /// Returns an array of menu bar items using private APIs to retrieve the
-    /// windows.
-    ///
-    /// - Parameter onScreenOnly: A Boolean value that indicates whether only
-    ///   the items that are on screen should be returned.
-    static func getMenuBarItemsPrivateAPI(for display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
+    private static func getMenuBarItemsPrivateAPI(on display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
         var option: Bridging.WindowListOption = [.menuBarItems]
         if onScreenOnly {
             option.insert(.onScreen)
@@ -212,7 +212,21 @@ extension MenuBarItem {
             .sortedByOrderInMenuBar()
     }
 
-    /// Returns an array of menu bar items using private APIs to retrieve
+    /// Returns an array of menu bar items in the menu bar on the given display.
+    ///
+    /// - Parameters:
+    ///   - display: The display to retrieve the menu bar items on.
+    ///   - method: The method to use to get the items.
+    ///   - onScreenOnly: A Boolean value that indicates whether only the items
+    ///     that are on screen should be returned.
+    static func getMenuBarItems(on display: CGDirectDisplayID, using method: GetterMethod, onScreenOnly: Bool) -> [MenuBarItem] {
+        switch method {
+        case .coreGraphics: getMenuBarItemsCoreGraphics(on: display, onScreenOnly: onScreenOnly)
+        case .privateAPI: getMenuBarItemsPrivateAPI(on: display, onScreenOnly: onScreenOnly)
+        }
+    }
+
+    /// Returns an array of menu bar items using a private API to retrieve
     /// the windows.
     ///
     /// - Parameters:
