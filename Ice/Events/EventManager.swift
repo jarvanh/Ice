@@ -476,7 +476,7 @@ extension EventManager {
         else {
             return false
         }
-        let menuBarItems = MenuBarItem.current(on: screen.displayID, using: .bridging, onScreenOnly: true, sortingBy: .orderInMenuBar)
+        let menuBarItems = MenuBarItem.getMenuBarItems(on: screen.displayID, using: .privateAPI, onScreenOnly: true)
         return menuBarItems.contains { $0.frame.contains(mouseLocation) }
     }
 

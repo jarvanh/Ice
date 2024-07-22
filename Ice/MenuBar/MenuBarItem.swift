@@ -166,15 +166,10 @@ extension MenuBarItem {
     /// The method to use to get the menu bar items.
     enum GetterMethod {
         case coreGraphics
-        case bridging
+        case privateAPI
     }
 
-    enum SortingMethod {
-        case orderInMenuBar
-        case custom((MenuBarItem, MenuBarItem) -> Bool)
-    }
-
-    private static func current_CoreGraphics(on display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
+    private static func getMenuBarItemsCoreGraphics(on display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
         let windows = if onScreenOnly {
             WindowInfo.getOnScreenWindows(excludeDesktopWindows: true)
         } else {
@@ -183,61 +178,51 @@ extension MenuBarItem {
         guard let menuBarWindow = WindowInfo.getMenuBarWindow(from: windows, for: display) else {
             return []
         }
-        return windows.compactMap { window in
-            guard
-                window.isMenuBarItem,
-                window.title != "",
-                window.frame.minY == menuBarWindow.frame.minY,
-                window.frame.maxY == menuBarWindow.frame.maxY
-            else {
-                return nil
+        return windows.lazy
+            .compactMap { window in
+                guard
+                    window.isMenuBarItem,
+                    window.title != "",
+                    window.frame.minY == menuBarWindow.frame.minY,
+                    window.frame.maxY == menuBarWindow.frame.maxY
+                else {
+                    return nil
+                }
+                return MenuBarItem(uncheckedItemWindow: window)
             }
-            return MenuBarItem(uncheckedItemWindow: window)
-        }
+            .sortedByOrderInMenuBar()
     }
 
-    private static func current_Bridging(on display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
+    private static func getMenuBarItemsPrivateAPI(on display: CGDirectDisplayID, onScreenOnly: Bool) -> [MenuBarItem] {
         var option: Bridging.WindowListOption = [.menuBarItems]
         if onScreenOnly {
             option.insert(.onScreen)
         }
         let displayBounds = CGDisplayBounds(display)
-        return Bridging.getWindowList(option: option).compactMap { windowID in
-            guard
-                let windowFrame = Bridging.getWindowFrame(for: windowID),
-                displayBounds.intersects(windowFrame)
-            else {
-                return nil
+        return Bridging.getWindowList(option: option).lazy
+            .compactMap { windowID in
+                guard
+                    let windowFrame = Bridging.getWindowFrame(for: windowID),
+                    displayBounds.intersects(windowFrame)
+                else {
+                    return nil
+                }
+                return MenuBarItem(windowID: windowID)
             }
-            return MenuBarItem(windowID: windowID)
-        }
+            .sortedByOrderInMenuBar()
     }
 
-    /// Returns an array of the current menu bar items in the menu bar on
-    /// the given display.
+    /// Returns an array of menu bar items in the menu bar on the given display.
     ///
     /// - Parameters:
     ///   - display: The display to retrieve the menu bar items on.
     ///   - method: The method to use to get the items.
-    ///   - onScreenOnly: A Boolean value that indicates whether only the
-    ///     items that are on screen should be returned.
-    static func current(
-        on display: CGDirectDisplayID,
-        using getterMethod: GetterMethod,
-        onScreenOnly: Bool,
-        sortingBy sortingMethod: SortingMethod?
-    ) -> [MenuBarItem] {
-        let items = switch getterMethod {
-        case .coreGraphics: current_CoreGraphics(on: display, onScreenOnly: onScreenOnly)
-        case .bridging: current_Bridging(on: display, onScreenOnly: onScreenOnly)
-        }
-        return switch sortingMethod {
-        case .orderInMenuBar:
-            items.sortedByOrderInMenuBar()
-        case .custom(let areInIncreasingOrder):
-            items.sorted(by: areInIncreasingOrder)
-        case nil:
-            items
+    ///   - onScreenOnly: A Boolean value that indicates whether only the items
+    ///     that are on screen should be returned.
+    static func getMenuBarItems(on display: CGDirectDisplayID, using method: GetterMethod, onScreenOnly: Bool) -> [MenuBarItem] {
+        switch method {
+        case .coreGraphics: getMenuBarItemsCoreGraphics(on: display, onScreenOnly: onScreenOnly)
+        case .privateAPI: getMenuBarItemsPrivateAPI(on: display, onScreenOnly: onScreenOnly)
         }
     }
 
