@@ -169,6 +169,7 @@ extension MenuBarItem {
         case bridging
     }
 
+    /// The method to use to sort the menu bar items.
     enum SortingMethod {
         case orderInMenuBar
         case custom((MenuBarItem, MenuBarItem) -> Bool)
